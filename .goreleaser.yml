@@ -1,0 +1,13 @@
+---
+project_name: playground
+version: 2
+
+builds:
+- env:
+  - CGO_ENABLED=1
+  main: ./cmd/playground/main.go
+  flags:
+  - -trimpath
+  ldflags:
+  - -s -w
+  mod_timestamp: '{{ .CommitTimestamp }}'

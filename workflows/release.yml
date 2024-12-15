@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, macos-13]
+
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+      pull-requests: write
+      repository-projects: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: stable
+
+    - name: Build project
+      env:
+        CGO_ENABLED: "1"
+      run: |
+        go build \
+          -trimpath \
+          -ldflags="-s -w" \
+          -o playground \
+          cmd/playground/main.go
+
+    - name: Upload release asset
+      env:
+        GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      run: |
+        SYSTEM_UNAME="$(uname | tr '[:upper:]' '[:lower:]')"
+        SYSTEM_ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')"
+        DIR_NAME="$(basename $(pwd))"
+        CURRENT_TAG="$(git describe --exact-match --tags)"
+        TARBALL_NAME="${DIR_NAME}_${CURRENT_TAG#v}_${SYSTEM_UNAME}_${SYSTEM_ARCH}.tar.gz"
+        tar -cf - LICENSE README.md playground | gzip --best >"$TARBALL_NAME"
+        gh release upload "$CURRENT_TAG" "$TARBALL_NAME"
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: tarball-${{ matrix.os }}
+        path: |
+          *.tar.gz
+
+
+  homebrew_update:
+    needs: build
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout Homebrew tap repository
+      uses: actions/checkout@v3
+      with:
+        repository: homeport/homebrew-tap
+        path: homebrew-tap
+
+    - name: Checkout project repository
+      uses: actions/checkout@v3
+      with:
+        path: repo
+
+    - name: Download all workflow run artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: tarballs
+
+    - name: Update Homebrew Formula
+      env:
+        GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: repo/hack/update-formula.sh
