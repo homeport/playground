@@ -19,7 +19,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Go
       uses: actions/setup-go@v3
@@ -65,7 +65,7 @@ jobs:
 
     steps:
     - name: Checkout Homebrew tap repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: homeport/homebrew-tap
         path: homebrew-tap
