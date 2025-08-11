@@ -72,7 +72,7 @@ jobs:
         token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
 
     - name: Download all workflow run artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         path: tarballs
 
